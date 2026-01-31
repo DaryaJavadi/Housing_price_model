@@ -6,12 +6,14 @@ from sklearn.model_selection import train_test_split
 
 logger = logging.getLogger(__name__)
 
+# ----------------- Load Housing Data -----------------
 def load_housing(csv_path: str) -> pd.DataFrame:
     df = pd.read_csv(csv_path)
     if df.empty:
         raise ValueError(f'Dataset is empty: {csv_path}')
     return df 
 
+# ----------------- Add Income Category -----------------
 def add_income_cat(df: pd.DataFrame, 
                    income_col: str, 
                    bins: list[float], 
@@ -19,14 +21,16 @@ def add_income_cat(df: pd.DataFrame,
     if income_col not in df.columns:
         raise KeyError(f'Missing stratify column: {income_col}')
     out = df.copy()
+    # pd.cut → bin-ləmə
     out['income_cat'] = pd.cut(out[income_col], bins = bins, labels = labels)
-    
+
+    # Əgər bin-lər bütün dəyərləri əhatə etmirsə, xətanı göstər
     if out['income_cat'].isna().any():
         n = int(out['income_cat'].isna().sum())
         raise ValueError(f'income_cat has {n} NANs (bins may not cover all values)')
     return out
 
-
+# ----------------- Stratified Train/Test Split -----------------
 def stratified_split(
         df: pd.DataFrame,
         target: str,
@@ -36,6 +40,8 @@ def stratified_split(
         test_size: float,
         random_state: int,
 ) -> tuple[pd.DataFrame, pd.DataFrame, pd.Series, pd.Series]:
+
+    # Target sütun yoxdursa xətanı göstər
     if target not in df.columns:
         raise KeyError(f'Missing target column: {target}')
     
@@ -48,6 +54,7 @@ def stratified_split(
         random_state= random_state
     )
 
+    # 'income_cat' sütununu split-dən sonra silirik
     for s in (train_df, test_df):
         s.drop(columns = ['income_cat'], inplace = True)
 
@@ -60,3 +67,9 @@ def stratified_split(
     logger.info("Split sizes: train=%d test=%d", len(train_df), len(test_df))
 
     return X_train, X_test, y_train, y_test
+
+    # Məqsəd: Stratify sütunu continuous olarsa → bin-lərə bölmək lazımdır (income_cat)
+
+    # Dataset-i yükləmək (load_housing)
+    # income sütunu əsasında income category yaratmaq (add_income_cat)
+    # Stratified train/test split etmək (stratified_split)
